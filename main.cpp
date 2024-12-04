@@ -6,7 +6,9 @@
 
 using namespace std;
 
-// mozna jeszcze dodac globalnie te wszystkie guestId, paymentId i je inkrementowac przy tworzeniu
+unsigned int nextGuestId = 0;
+unsigned int nextReservationId = 0;
+unsigned int nextPaymentId = 0;
 
 class Hotel;
 class Room;
@@ -19,18 +21,16 @@ private:
     string name;
     string address;
     vector<Guest*> guests;
-    vector<Reservation*> reservations;
     vector<Room*> rooms;
 
 public:
     Hotel(string n, string a) : name(n), address(a) {}
 
     void addGuest(Guest& guest) { guests.push_back(&guest); }
-    void addReservation(Reservation& reservation) { reservations.push_back(&reservation); }
     void addRoom(Room& room) { rooms.push_back(&room); }
 
     vector<Room*> getAvailableRooms(time_t startDate, time_t endDate, unsigned int peopleCount);
-    vector<Reservation*> getAllGuestReservations(Guest* guest);
+    vector<Reservation*> getAllReservations();
     void displayRooms();
     void displayReservations();
 };
@@ -44,8 +44,8 @@ private:
     vector<pair<time_t, time_t>> bookings;
 
 public:
-    Room(string n, string s, unsigned int price, unsigned int max)
-        : roomNumber(n), standard(s), pricePerNight(price), maxAmountOfPeople(max) {}
+    Room(string n, string s, unsigned int p, unsigned int m)
+        : roomNumber(n), standard(s), pricePerNight(p), maxAmountOfPeople(m) {}
 
     void setPrice(unsigned int price) { pricePerNight = price; }
     void setMaxAmountOfPeople(unsigned int max) { maxAmountOfPeople = max; }
@@ -82,21 +82,24 @@ private:
     vector<Reservation*> reservations;
 
 public:
+    unsigned int guestId;
+
     Guest(string guestName, string guestEmail, string guestPassword)
-        : name(guestName), email(guestEmail), password(guestPassword) {}
+        : guestId(nextGuestId++), name(guestName), email(guestEmail), password(guestPassword) {}
 
     string getName() const { return name; }
     string getEmail() const { return email; }
-    bool verifyPassword(const string& inputPassword) const { return password == inputPassword; }
+    vector<Reservation*> getReservations() { return reservations; }
 
+
+    bool verifyPassword(const string& inputPassword) const { return password == inputPassword; }
     void addReservation(Reservation* reservation) { reservations.push_back(reservation); }
+    
     void displayReservations();
-    void cancelReservation();
 };
 
 class Reservation {
 private:
-
     time_t startDate;
     time_t endDate;
     Room* room;
@@ -105,18 +108,29 @@ private:
     string status;
 
 public:
+    unsigned int reservationId;
     Guest* guest;
 
     Reservation(Guest* g, time_t start, time_t end, Room* r)
-        : guest(g), startDate(start), endDate(end), room(r), isPaidFor(false) {
+    : reservationId(nextReservationId++), guest(g), startDate(start), endDate(end), room(r), isPaidFor(false) {
         totalPrice = (endDate - startDate) / 86400 * room->getPricePerNight();
         status = "Zarezerwowany";
     }
 
     void displayDetails() {
-        cout << "Rezerwacja dla " << guest->getName() << ". Pokój: " << room->getRoomNumber()
-            << ", Cena: " << totalPrice << " zł, Termin: od " << ctime(&startDate)
-            << " do " << ctime(&endDate) << "\n";
+        char start[64], end[64];
+        
+        struct tm* datetime1 = localtime(&startDate);
+        strftime(start, 64, "%Y-%m-%d %H:%M", datetime1);   
+
+        struct tm* datetime2 = localtime(&endDate);
+        strftime(end, 64, "%Y-%m-%d %H:%M", datetime2);
+
+        cout << "Rezerwacja " << reservationId
+            << " dla " << guest->getName() << ". Pokój: " << room->getRoomNumber() 
+            << ", Cena: " << totalPrice << " zł, \nod " 
+            << start << " do " << end
+            << ",\nstatus: " << status << "\n\n";
     }
 
     void cancel() {
@@ -137,7 +151,9 @@ protected:
     string method;
 
 public:
-    Payment(double a) : amount(a) {}
+    unsigned int paymentId;
+
+    Payment(double a) : paymentId(nextPaymentId++), amount(a) {}
 
     virtual void processPayment() = 0;
 };
@@ -163,6 +179,7 @@ public:
     }
 };
 
+
 vector<Room*> Hotel::getAvailableRooms(time_t startDate, time_t endDate, unsigned int peopleCount) {
     vector<Room*> availableRooms;
     for (auto& room : rooms) {
@@ -173,14 +190,14 @@ vector<Room*> Hotel::getAvailableRooms(time_t startDate, time_t endDate, unsigne
     return availableRooms;
 }
 
-vector<Reservation*> Hotel::getAllGuestReservations(Guest* guest) {
+vector<Reservation*> Hotel::getAllReservations() {
+    vector<Reservation*> allReservations;
     vector<Reservation*> guestReservations;
-    for (auto& reservation : reservations) {
-        if (reservation->guest == guest) {
-            guestReservations.push_back(reservation);
-        }
+    for (auto& guest : guests) {
+        guestReservations = guest->getReservations();
+        allReservations.insert(allReservations.end(), guestReservations.begin(), guestReservations.end());
     }
-    return guestReservations;
+    return allReservations;
 }
 
 void Hotel::displayRooms() {
@@ -191,8 +208,9 @@ void Hotel::displayRooms() {
 }
 
 void Hotel::displayReservations() {
+    vector<Reservation*> allReservations = this->getAllReservations();
     cout << "Lista rezerwacji:\n";
-    for (auto& reservation : reservations) {
+    for (auto& reservation : allReservations) {
         reservation->displayDetails();
     }
 }
@@ -207,12 +225,7 @@ void Guest::displayReservations() {
         }
     }
 }
-// Do implementacji
-void Guest::cancelReservation() {
 
-    displayReservations();
-
-}
 
 int main() {
     // Testowanie kodu
@@ -232,12 +245,13 @@ int main() {
     auto availableRooms = hotel.getAvailableRooms(startDate, endDate, 2);
 
     if (!availableRooms.empty()) {
-        auto reservation = Reservation(&guest1, startDate, endDate, availableRooms[0]);
-        guest1.addReservation(&reservation);
-        hotel.addReservation(reservation);
+        auto reservation1 = Reservation(&guest1, startDate, endDate, availableRooms[0]);
+        auto reservation2 = Reservation(&guest1, startDate, endDate, availableRooms[0]);
+        guest1.addReservation(&reservation1);
+        guest1.addReservation(&reservation2);
 
         cout << "Rezerwacja pomyślna!\n";
-        reservation.displayDetails();
+        // reservation.displayDetails();
     }
 
     hotel.displayReservations();
