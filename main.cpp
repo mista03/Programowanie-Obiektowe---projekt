@@ -1,8 +1,11 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <sstream>
 #include <ctime>
 #include <memory>
+#include <iomanip>
+#include <regex>
 
 using namespace std;
 
@@ -22,15 +25,22 @@ private:
     string address;
     vector<Guest*> guests;
     vector<Room*> rooms;
+    // doba hotelowa
+    string checkInTime;
+    string checkOutTime;
 
 public:
-    Hotel(string n, string a) : name(n), address(a) {}
+    Hotel(string n, string a, string chkInTime, string chkOutTime) 
+        : name(n), address(a), checkInTime(chkInTime), checkOutTime(chkOutTime) {}
 
     void addGuest(Guest& guest) { guests.push_back(&guest); }
     void addRoom(Room& room) { rooms.push_back(&room); }
 
     vector<Room*> getAvailableRooms(time_t startDate, time_t endDate, unsigned int peopleCount);
     vector<Reservation*> getAllReservations();
+    string getCheckInTime() { return checkInTime; }
+    string getCheckOutTime() { return checkOutTime; }
+
     void displayRooms();
     void displayReservations();
 };
@@ -57,7 +67,12 @@ public:
 
     bool checkAvailability(time_t startDate, time_t endDate) {
         for (const auto& booking : bookings) {
-            if (startDate < booking.second && endDate > booking.first) {
+            // FIXME? JESLI datetime albo konczy sie, miesci sie w calosci, lub zaczyna się w zajetym zakresie ZWROC FALSE
+            // doba hotelowa nie przewiduje ze rezerwacja1 konczy sie np o 15 a rezerwacja2 zaczyna sie o 15, bo musi byc przerwa
+            bool isContained = startDate <= booking.second && endDate >= booking.first;
+            bool endsWithin = startDate < booking.first && (endDate >= booking.first && endDate <= booking.second);
+            bool startsWithin = (startDate >= booking.first && startDate <= booking.second) && endDate > booking.second;
+            if (isContained || endsWithin || startsWithin) { 
                 return false;
             }
         }
@@ -112,21 +127,23 @@ public:
     Guest* guest;
 
     Reservation(Guest* g, time_t start, time_t end, Room* r)
-    : reservationId(nextReservationId++), guest(g), startDate(start), endDate(end), room(r), isPaidFor(false) {
-        totalPrice = (endDate - startDate) / 86400 * room->getPricePerNight();
-        status = "Zarezerwowany";
+        : reservationId(nextReservationId++), guest(g), startDate(start), endDate(end), room(r), isPaidFor(false) {
+        totalPrice = ((endDate - startDate) / 86400 + 1) * room->getPricePerNight();
+        status = "potwierdzona";
     }
 
     void displayDetails() {
         char start[64], end[64];
         
+        // v TODO: mozna by ujednolicic z get_time, czyli tutaj put_time 
         struct tm* datetime1 = localtime(&startDate);
         strftime(start, 64, "%Y-%m-%d %H:%M", datetime1);   
 
         struct tm* datetime2 = localtime(&endDate);
         strftime(end, 64, "%Y-%m-%d %H:%M", datetime2);
+        // ^
 
-        cout << "Rezerwacja " << reservationId
+        cout << "Rezerwacja #" << reservationId
             << " dla " << guest->getName() << ". Pokój: " << room->getRoomNumber() 
             << ", Cena: " << totalPrice << " zł, \nod " 
             << start << " do " << end
@@ -134,7 +151,7 @@ public:
     }
 
     void cancel() {
-        status = "Odwołany";
+        status = "anulowana";
         cout << "Rezerwacja anulowana.\n";
     }
 
@@ -183,7 +200,9 @@ public:
 vector<Room*> Hotel::getAvailableRooms(time_t startDate, time_t endDate, unsigned int peopleCount) {
     vector<Room*> availableRooms;
     for (auto& room : rooms) {
-        if (room->getMaxAmountOfPeople() >= peopleCount && room->checkAvailability(startDate, endDate)) {
+        bool isBigEnough = room->getMaxAmountOfPeople() >= peopleCount;
+        bool isAvailable = room->checkAvailability(startDate, endDate);
+        if (isBigEnough && isAvailable) {
             availableRooms.push_back(room);
         }
     }
@@ -226,32 +245,90 @@ void Guest::displayReservations() {
     }
 }
 
+string inputDate() {
+    // uzytkownik podaje date jako string
+    string date;
+    // TODO: nie wiem jak wykrywac nieprawidlowe daty, np. 2025-02-31, 2025-31-31
+    // trzeba by pewnie zlaczyc inputDate() i convertDate()
+    regex datePattern(R"(\d{4}-\d{2}-\d{2})"); // YYYY-MM-DD 
+
+    // sprawdzanie regex daty, ewentualna prosba o ponowne podanie
+    while (true) {
+        cin >> date;
+        if (regex_match(date, datePattern)) {
+            return date;
+        } else {
+            cout << "Nieprawidłowy format daty. Spróbuj ponownie.\n";
+        }
+    }
+}
+
+time_t convertDate(string datetime) {
+    tm dt = {};    
+    istringstream(datetime) >> get_time(&dt, "%Y-%m-%d %H:%M:%S");
+
+    return mktime(&dt);
+}
 
 int main() {
     // Testowanie kodu
     Room room1("101", "Standard", 200, 2);
     Room room2("102", "Deluxe", 300, 3);
+    Room room3("103", "Standard", 300, 4);
+    Room room4("104", "Deluxe", 600, 5);
     Guest guest1("Jan Kowalski", "jankowalski@gmail.com", "haslo123");
-    Hotel hotel("Słoneczny młyn", "Portowa 5");
+    Hotel hotel("Słoneczny młyn", "Portowa 5", "15:00:00", "10:00:00");
 
     hotel.addRoom(room1);
     hotel.addRoom(room2);
+    hotel.addRoom(room3);
+    hotel.addRoom(room4);
     hotel.addGuest(guest1);
 
-    //Zarządzenie datami do przemyślenia/zmiany - moja propozycja
-    // ustalenie doby hotelowej i wybieranie po samych dniach
-    time_t startDate = time(0) + 86400; // Jutro
-    time_t endDate = time(0) + 3 * 86400; // Dwa dni później
+    // nwm czy to ma sens chcialem ukryc dobe hotelowa w klasie
+    string checkInTime = hotel.getCheckInTime();
+    string checkOutTime = hotel.getCheckOutTime();
+    // string from = inputDate(); 
+    // string to = inputDate(); 
+    string from = "2025-01-02";
+    string to = "2025-01-06";
+    time_t startDate = convertDate(from + string(" ") + checkInTime);
+    time_t endDate = convertDate(to + string(" ") + checkOutTime);
+
     auto availableRooms = hotel.getAvailableRooms(startDate, endDate, 2);
-
+    // debug
+    cout << "dostepne: ";
+    for (auto room : availableRooms) { 
+        cout << room->getRoomNumber() << " ";
+    }
+    cout << "\n";
+    //
+    // TODO? mozna zrobic wybor z listy dostepnych pokoi
     if (!availableRooms.empty()) {
-        auto reservation1 = Reservation(&guest1, startDate, endDate, availableRooms[0]);
-        auto reservation2 = Reservation(&guest1, startDate, endDate, availableRooms[0]);
-        guest1.addReservation(&reservation1);
-        guest1.addReservation(&reservation2);
+        auto chosenRoom = availableRooms[0];
+        auto reservation1 = new Reservation(&guest1, startDate, endDate, chosenRoom);
+        guest1.addReservation(reservation1);
+        chosenRoom->bookRoom(startDate, endDate);
 
-        cout << "Rezerwacja pomyślna!\n";
-        // reservation.displayDetails();
+        // cout << "Rezerwacja pomyślna!\n";
+    }
+    hotel.displayReservations();
+
+    availableRooms = hotel.getAvailableRooms(startDate, endDate, 2);
+    // debug
+    cout << "dostepne: ";
+    for (auto room : availableRooms) { 
+        cout << room->getRoomNumber() << " ";
+    }
+    cout << "\n";
+    //
+    if (!availableRooms.empty()) {
+        auto chosenRoom = availableRooms[0];
+        auto reservation2 = new Reservation(&guest1, startDate, endDate, chosenRoom);
+        guest1.addReservation(reservation2);
+        chosenRoom->bookRoom(startDate, endDate);
+
+        // cout << "Rezerwacja pomyślna!\n";
     }
 
     hotel.displayReservations();
