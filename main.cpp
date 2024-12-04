@@ -5,6 +5,7 @@
 #include <ctime>
 #include <memory>
 #include <iomanip>
+#include <regex>
 
 using namespace std;
 
@@ -66,7 +67,12 @@ public:
 
     bool checkAvailability(time_t startDate, time_t endDate) {
         for (const auto& booking : bookings) {
-            if (startDate < booking.second && endDate > booking.first) {
+            // FIXME? JESLI datetime albo konczy sie, miesci sie w calosci, lub zaczyna się w zajetym zakresie ZWROC FALSE
+            // TODO: poprawa czytelnosci, moze rozdzielenie na zmienne bool
+            // doba hotelowa nie przewiduje ze rezerwacja1 konczy sie np o 15 a rezerwacja2 zaczyna sie o 15, bo musi byc przerwa
+            if (startDate <= booking.second && endDate >= booking.first ||                                  // zawiera sie
+                startDate < booking.first && (endDate >= booking.first && endDate <= booking.second) ||     // konczy sie
+                (startDate >= booking.first && startDate <= booking.second) && endDate > booking.second ) { // zaczyna sie
                 return false;
             }
         }
@@ -129,13 +135,13 @@ public:
     void displayDetails() {
         char start[64], end[64];
         
-        // TODO: mozna by ujednolicic z get_time, czyli tutaj put_time
+        // v TODO: mozna by ujednolicic z get_time, czyli tutaj put_time 
         struct tm* datetime1 = localtime(&startDate);
         strftime(start, 64, "%Y-%m-%d %H:%M", datetime1);   
 
         struct tm* datetime2 = localtime(&endDate);
         strftime(end, 64, "%Y-%m-%d %H:%M", datetime2);
-        //
+        // ^
 
         cout << "Rezerwacja " << reservationId
             << " dla " << guest->getName() << ". Pokój: " << room->getRoomNumber() 
@@ -194,7 +200,9 @@ public:
 vector<Room*> Hotel::getAvailableRooms(time_t startDate, time_t endDate, unsigned int peopleCount) {
     vector<Room*> availableRooms;
     for (auto& room : rooms) {
-        if (room->getMaxAmountOfPeople() >= peopleCount && room->checkAvailability(startDate, endDate)) {
+        bool isBigEnough = room->getMaxAmountOfPeople() >= peopleCount;
+        bool isAvailable = room->checkAvailability(startDate, endDate);
+        if (isBigEnough && isAvailable) {
             availableRooms.push_back(room);
         }
     }
@@ -240,9 +248,19 @@ void Guest::displayReservations() {
 string inputDate() {
     // uzytkownik podaje date jako string
     string datetime;
-    cin >> datetime;
-    // TODO: sprawdzanie regex daty, prosba o ponowne podanie
-    return datetime;
+    // TODO: nie wiem jak wykrywac nieprawidlowe daty, np. 2025-02-31, 2025-31-31
+    // trzeba by pewnie zlaczyc inputDate() i convertDate()
+    regex datePattern(R"(\d{4}-\d{2}-\d{2})"); // YYYY-MM-DD 
+
+    // sprawdzanie regex daty, ewentualna prosba o ponowne podanie
+    while (true) {
+        cin >> datetime;
+        if (regex_match(datetime, datePattern)) {
+            return datetime;
+        } else {
+            cout << "Nieprawidłowy format daty. Spróbuj ponownie.\n";
+        }
+    }
 }
 
 time_t convertDate(string datetime) {
@@ -275,8 +293,8 @@ int main() {
 
     auto availableRooms = hotel.getAvailableRooms(startDate, endDate, 2);
     if (!availableRooms.empty()) {
-        auto reservation1 = Reservation(&guest1, startDate, endDate, availableRooms[0]);
-        guest1.addReservation(&reservation1);
+        auto reservation1 = new Reservation(&guest1, startDate, endDate, availableRooms[0]);
+        guest1.addReservation(reservation1);
 
         cout << "Rezerwacja pomyślna!\n";
         // reservation.displayDetails();
