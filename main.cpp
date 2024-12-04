@@ -68,11 +68,11 @@ public:
     bool checkAvailability(time_t startDate, time_t endDate) {
         for (const auto& booking : bookings) {
             // FIXME? JESLI datetime albo konczy sie, miesci sie w calosci, lub zaczyna się w zajetym zakresie ZWROC FALSE
-            // TODO: poprawa czytelnosci, moze rozdzielenie na zmienne bool
             // doba hotelowa nie przewiduje ze rezerwacja1 konczy sie np o 15 a rezerwacja2 zaczyna sie o 15, bo musi byc przerwa
-            if (startDate <= booking.second && endDate >= booking.first ||                                  // zawiera sie
-                startDate < booking.first && (endDate >= booking.first && endDate <= booking.second) ||     // konczy sie
-                (startDate >= booking.first && startDate <= booking.second) && endDate > booking.second ) { // zaczyna sie
+            bool isContained = startDate <= booking.second && endDate >= booking.first;
+            bool endsWithin = startDate < booking.first && (endDate >= booking.first && endDate <= booking.second);
+            bool startsWithin = (startDate >= booking.first && startDate <= booking.second) && endDate > booking.second;
+            if (isContained || endsWithin || startsWithin) { 
                 return false;
             }
         }
@@ -129,7 +129,7 @@ public:
     Reservation(Guest* g, time_t start, time_t end, Room* r)
         : reservationId(nextReservationId++), guest(g), startDate(start), endDate(end), room(r), isPaidFor(false) {
         totalPrice = ((endDate - startDate) / 86400 + 1) * room->getPricePerNight();
-        status = "confirmed";
+        status = "potwierdzona";
     }
 
     void displayDetails() {
@@ -143,7 +143,7 @@ public:
         strftime(end, 64, "%Y-%m-%d %H:%M", datetime2);
         // ^
 
-        cout << "Rezerwacja " << reservationId
+        cout << "Rezerwacja #" << reservationId
             << " dla " << guest->getName() << ". Pokój: " << room->getRoomNumber() 
             << ", Cena: " << totalPrice << " zł, \nod " 
             << start << " do " << end
@@ -151,7 +151,7 @@ public:
     }
 
     void cancel() {
-        status = "cancelled";
+        status = "anulowana";
         cout << "Rezerwacja anulowana.\n";
     }
 
@@ -247,16 +247,16 @@ void Guest::displayReservations() {
 
 string inputDate() {
     // uzytkownik podaje date jako string
-    string datetime;
+    string date;
     // TODO: nie wiem jak wykrywac nieprawidlowe daty, np. 2025-02-31, 2025-31-31
     // trzeba by pewnie zlaczyc inputDate() i convertDate()
     regex datePattern(R"(\d{4}-\d{2}-\d{2})"); // YYYY-MM-DD 
 
     // sprawdzanie regex daty, ewentualna prosba o ponowne podanie
     while (true) {
-        cin >> datetime;
-        if (regex_match(datetime, datePattern)) {
-            return datetime;
+        cin >> date;
+        if (regex_match(date, datePattern)) {
+            return date;
         } else {
             cout << "Nieprawidłowy format daty. Spróbuj ponownie.\n";
         }
@@ -274,11 +274,15 @@ int main() {
     // Testowanie kodu
     Room room1("101", "Standard", 200, 2);
     Room room2("102", "Deluxe", 300, 3);
+    Room room3("103", "Standard", 300, 4);
+    Room room4("104", "Deluxe", 600, 5);
     Guest guest1("Jan Kowalski", "jankowalski@gmail.com", "haslo123");
     Hotel hotel("Słoneczny młyn", "Portowa 5", "15:00:00", "10:00:00");
 
     hotel.addRoom(room1);
     hotel.addRoom(room2);
+    hotel.addRoom(room3);
+    hotel.addRoom(room4);
     hotel.addGuest(guest1);
 
     // nwm czy to ma sens chcialem ukryc dobe hotelowa w klasie
@@ -292,24 +296,41 @@ int main() {
     time_t endDate = convertDate(to + string(" ") + checkOutTime);
 
     auto availableRooms = hotel.getAvailableRooms(startDate, endDate, 2);
-    if (!availableRooms.empty()) {
-        auto reservation1 = new Reservation(&guest1, startDate, endDate, availableRooms[0]);
-        guest1.addReservation(reservation1);
-
-        cout << "Rezerwacja pomyślna!\n";
-        // reservation.displayDetails();
+    // debug
+    cout << "dostepne: ";
+    for (auto room : availableRooms) { 
+        cout << room->getRoomNumber() << " ";
     }
+    cout << "\n";
+    //
+    // TODO? mozna zrobic wybor z listy dostepnych pokoi
+    if (!availableRooms.empty()) {
+        auto chosenRoom = availableRooms[0];
+        auto reservation1 = new Reservation(&guest1, startDate, endDate, chosenRoom);
+        guest1.addReservation(reservation1);
+        chosenRoom->bookRoom(startDate, endDate);
+
+        // cout << "Rezerwacja pomyślna!\n";
+    }
+    hotel.displayReservations();
 
     availableRooms = hotel.getAvailableRooms(startDate, endDate, 2);
+    // debug
+    cout << "dostepne: ";
+    for (auto room : availableRooms) { 
+        cout << room->getRoomNumber() << " ";
+    }
+    cout << "\n";
+    //
     if (!availableRooms.empty()) {
-        auto reservation2 = Reservation(&guest1, startDate, endDate, availableRooms[0]);
-        guest1.addReservation(&reservation2);
+        auto chosenRoom = availableRooms[0];
+        auto reservation2 = new Reservation(&guest1, startDate, endDate, chosenRoom);
+        guest1.addReservation(reservation2);
+        chosenRoom->bookRoom(startDate, endDate);
 
-        cout << "Rezerwacja pomyślna!\n";
-        // reservation.displayDetails();
+        // cout << "Rezerwacja pomyślna!\n";
     }
 
-    cout << "\n";
     hotel.displayReservations();
 
     return 0;
