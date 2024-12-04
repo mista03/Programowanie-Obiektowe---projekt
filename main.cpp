@@ -4,6 +4,7 @@
 #include <sstream>
 #include <ctime>
 #include <memory>
+#include <iomanip>
 
 using namespace std;
 
@@ -23,15 +24,22 @@ private:
     string address;
     vector<Guest*> guests;
     vector<Room*> rooms;
+    // doba hotelowa
+    string checkInTime;
+    string checkOutTime;
 
 public:
-    Hotel(string n, string a) : name(n), address(a) {}
+    Hotel(string n, string a, string chkInTime, string chkOutTime) 
+        : name(n), address(a), checkInTime(chkInTime), checkOutTime(chkOutTime) {}
 
     void addGuest(Guest& guest) { guests.push_back(&guest); }
     void addRoom(Room& room) { rooms.push_back(&room); }
 
     vector<Room*> getAvailableRooms(time_t startDate, time_t endDate, unsigned int peopleCount);
     vector<Reservation*> getAllReservations();
+    string getCheckInTime() { return checkInTime; }
+    string getCheckOutTime() { return checkOutTime; }
+
     void displayRooms();
     void displayReservations();
 };
@@ -114,18 +122,20 @@ public:
 
     Reservation(Guest* g, time_t start, time_t end, Room* r)
         : reservationId(nextReservationId++), guest(g), startDate(start), endDate(end), room(r), isPaidFor(false) {
-        totalPrice = (endDate - startDate) / 86400 * room->getPricePerNight();
-        status = "Zarezerwowany";
+        totalPrice = ((endDate - startDate) / 86400 + 1) * room->getPricePerNight();
+        status = "confirmed";
     }
 
     void displayDetails() {
         char start[64], end[64];
         
+        // TODO: mozna by ujednolicic z get_time, czyli tutaj put_time
         struct tm* datetime1 = localtime(&startDate);
         strftime(start, 64, "%Y-%m-%d %H:%M", datetime1);   
 
         struct tm* datetime2 = localtime(&endDate);
         strftime(end, 64, "%Y-%m-%d %H:%M", datetime2);
+        //
 
         cout << "Rezerwacja " << reservationId
             << " dla " << guest->getName() << ". Pokój: " << room->getRoomNumber() 
@@ -227,48 +237,61 @@ void Guest::displayReservations() {
     }
 }
 
+string inputDate() {
+    // uzytkownik podaje date jako string
+    string datetime;
+    cin >> datetime;
+    // TODO: sprawdzanie regex daty, prosba o ponowne podanie
+    return datetime;
+}
+
+time_t convertDate(string datetime) {
+    tm dt = {};    
+    istringstream(datetime) >> get_time(&dt, "%Y-%m-%d %H:%M:%S");
+
+    return mktime(&dt);
+}
 
 int main() {
     // Testowanie kodu
     Room room1("101", "Standard", 200, 2);
     Room room2("102", "Deluxe", 300, 3);
     Guest guest1("Jan Kowalski", "jankowalski@gmail.com", "haslo123");
-    Hotel hotel("Słoneczny młyn", "Portowa 5");
+    Hotel hotel("Słoneczny młyn", "Portowa 5", "15:00:00", "10:00:00");
 
     hotel.addRoom(room1);
     hotel.addRoom(room2);
     hotel.addGuest(guest1);
 
-    // Zarządzenie datami
-    // doba hotelowa
-    string from = "2025-01-02 15:00:00";
-    string to = "2025-01-06 10:00:00";
-    string format = "%Y-%m-%d %H:%M:%S";
-
-    // uzytkownik podaje date jako string
-    // TODO: sprawdzanie regex daty, prosba o ponowne podanie
-    tm tm1 = {};
-    std::istringstream ss1(&tm1, from);
-    ss1 >> get_time(&tm1, format);    
-    time_t startDate = mktime(&tm1);
-
-    tm tm2 = {};
-    std::istringstream ss2(&tm2, to);
-    ss2 >> get_time(&tm2, format);
-    time_t endDate = mktime(&tm2);
+    // nwm czy to ma sens chcialem ukryc dobe hotelowa w klasie
+    string checkInTime = hotel.getCheckInTime();
+    string checkOutTime = hotel.getCheckOutTime();
+    // string from = inputDate(); 
+    // string to = inputDate(); 
+    string from = "2025-01-02";
+    string to = "2025-01-06";
+    time_t startDate = convertDate(from + string(" ") + checkInTime);
+    time_t endDate = convertDate(to + string(" ") + checkOutTime);
 
     auto availableRooms = hotel.getAvailableRooms(startDate, endDate, 2);
-
     if (!availableRooms.empty()) {
         auto reservation1 = Reservation(&guest1, startDate, endDate, availableRooms[0]);
-        auto reservation2 = Reservation(&guest1, startDate, endDate, availableRooms[0]);
         guest1.addReservation(&reservation1);
+
+        cout << "Rezerwacja pomyślna!\n";
+        // reservation.displayDetails();
+    }
+
+    availableRooms = hotel.getAvailableRooms(startDate, endDate, 2);
+    if (!availableRooms.empty()) {
+        auto reservation2 = Reservation(&guest1, startDate, endDate, availableRooms[0]);
         guest1.addReservation(&reservation2);
 
         cout << "Rezerwacja pomyślna!\n";
         // reservation.displayDetails();
     }
 
+    cout << "\n";
     hotel.displayReservations();
 
     return 0;
