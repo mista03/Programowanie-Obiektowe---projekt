@@ -112,7 +112,7 @@ public:
     Guest* guest;
 
     Reservation(Guest* g, time_t start, time_t end, Room* r)
-    : reservationId(nextReservationId++), guest(g), startDate(start), endDate(end), room(r), isPaidFor(false) {
+        : reservationId(nextReservationId++), guest(g), startDate(start), endDate(end), room(r), isPaidFor(false) {
         totalPrice = (endDate - startDate) / 86400 * room->getPricePerNight();
         status = "Zarezerwowany";
     }
@@ -134,7 +134,7 @@ public:
     }
 
     void cancel() {
-        status = "Odwołany";
+        status = "cancelled";
         cout << "Rezerwacja anulowana.\n";
     }
 
@@ -238,10 +238,36 @@ int main() {
     hotel.addRoom(room2);
     hotel.addGuest(guest1);
 
-    //Zarządzenie datami do przemyślenia/zmiany - moja propozycja
-    // ustalenie doby hotelowej i wybieranie po samych dniach
-    time_t startDate = time(0) + 86400; // Jutro
-    time_t endDate = time(0) + 3 * 86400; // Dwa dni później
+    // Zarządzenie datami
+    // doba hotelowa
+    string checkOutTime = " 15:00:00";
+    string checkInTime = " 10:00:00";
+
+    // uzytkownik podaje date jako string
+    // TODO: sprawdzanie regex daty, prosba o ponowne podanie
+    
+    // od
+    // string from = "2025-01-02";
+    // string year = from.substr(0, 4);
+    // string month = from.substr(5, 2);
+    // string day = from.substr(8, 2);
+    // cout << year << " " << month << " " << day << "\n";
+    // cout << stoi(year) << " " << stoi(month) << " " << stoi(day) << "\n";
+
+    struct tm* start;
+    struct tm* end;
+
+    string format = "%Y-%m-%d %H:%M:%S";
+    char* from = "2025-01-02";
+    strcat(from, checkInTime);
+    strptime(from, format, &start);
+    char* to = "2025-01-06";
+    strcat(from, checkOutTime);
+    strptime(to, format, &end);
+    
+    time_t startDate = mktime(start);
+    time_t endDate = mktime(end);
+
     auto availableRooms = hotel.getAvailableRooms(startDate, endDate, 2);
 
     if (!availableRooms.empty()) {
