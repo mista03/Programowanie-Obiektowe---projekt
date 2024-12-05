@@ -42,6 +42,7 @@ public:
     string getCheckInTime() { return checkInTime; }
     string getCheckOutTime() { return checkOutTime; }
     string getPassword() { return password; }
+    vector<Guest*> getGuests() { return guests; }
 
     void displayRooms();
     void displayReservations();
@@ -67,6 +68,7 @@ public:
     unsigned int getPricePerNight() const { return pricePerNight; }
     unsigned int getMaxAmountOfPeople() const { return maxAmountOfPeople; }
 
+
     bool checkAvailability(time_t startDate, time_t endDate) {
         for (const auto& booking : bookings) {
             // FIXME? JESLI datetime albo konczy sie, miesci sie w calosci, lub zaczyna się w zajetym zakresie ZWROC FALSE
@@ -83,6 +85,18 @@ public:
 
     void bookRoom(time_t startDate, time_t endDate) {
         bookings.push_back({startDate, endDate});
+    }
+    void cancelBooking(time_t startDate, time_t endDate) {
+        bookings.erase(
+            remove_if(
+                bookings.begin(),
+                bookings.end(),
+                [startDate, endDate](const pair<time_t, time_t>& booking) {
+                    return startDate == booking.first && endDate == booking.second;
+                }
+            ),
+            bookings.end()
+        );
     }
 
     void displayDetails() {
@@ -154,6 +168,7 @@ public:
 
     void cancel() {
         status = "anulowana";
+        room->cancelBooking(startDate, endDate);
         cout << "Rezerwacja anulowana.\n";
     }
 
@@ -295,7 +310,7 @@ void displayMainManu(Hotel* hotel) {
             break;
             case 2:
                 cout << "Profil gościa\n";
-                //manageGuestProfile(hotel);
+                manageGuestLogging(hotel);
             break;
             case 3:
                 cout << "Do widzenia!\n";
@@ -326,13 +341,14 @@ void manageHotelProfile(Hotel* hotel) {
 
         }
     }
-    // TODO: Dodać resztę możliwych działań administratora hotelu.
-    while (choice != 4){
+    // TODO: Przemyśleć czy jeszcze jakieś działania są potrzebne?.
+    while (choice != 5){
         cout << "\n=== Profil hotelu ===\n";
         cout << "1. Wyświetl wszystkie pokoje\n";
         cout << "2. Sprawdź dostępność pokoi\n";
         cout << "3. Wyświetl rezerwacje\n";
-        cout << "4. Powrót do głównego menu\n";
+        cout << "4. Anuluj rezerwacje\n";
+        cout << "5. Powrót do głównego menu\n";
         cout << "Twój wybór: ";
         cin >> choice;
 
@@ -356,21 +372,112 @@ void manageHotelProfile(Hotel* hotel) {
             case 3:
                 hotel->displayReservations();
                 break;
-            case 4:
+            case 4: {
+                int reservationId;
+                hotel->displayReservations();
+                cout << "Podaj numer rezerwacji do anulowania: ";
+                cin >> reservationId;
+                auto allReservations = hotel->getAllReservations();
+                for (auto& reservation : allReservations) {
+                    if (reservationId==reservation->reservationId) {
+                        reservation->cancel();
+                        break;
+                    }
+                }
+                break;
+            }
+            case 5:
                 cout << "Powrót do głównego menu\n";
-                return;
+                break;
+            default:
+                cout << "Nieprawidłowy wybór. Spróbuj ponownie.\n";
         }
     }
 }
-// TODO Stworzyć wybór dodanie użytkownika/logowania
+
 void manageGuestLogging(Hotel* hotel) {
-    cout << "Logowanie użytkownika\n";
-    // manageGuestProfile(&guest);
+    int choice;
+
+    while (choice!=3) {
+        cout << "\n=== Witaj w aplikacji hotelowej ===\n";
+        cout << "1. Zaloguj się na swoje konto\n";
+        cout << "2. Utwórz nowe konto\n";
+        cout << "3. Powrót do menu\n";
+        cout << "Twój wybór: ";
+        cin >> choice;
+
+        switch (choice) {
+            case 1: {
+                string email;
+                string password;
+                Guest* loggingGuest;
+                bool check = false;
+                auto guests=hotel->getGuests();
+                cout << "Logowanie do konta\n";
+                cout << "Podaj swój adres email: ";
+                cin >> email;
+                for (auto& guest : guests) {
+                    if (email == guest->getEmail()) {
+                        loggingGuest = guest;
+                        check = true;
+                        break;
+                    }
+                }
+                if (!check) {
+                    cout << "Konto o podanym adresie email nie istnieje\n";
+                    break;
+                }
+
+                int attempts = 3;
+                while (attempts>0) {
+                    cout << "Podaj hasło: ";
+                    cin >> password;
+
+                    if (!loggingGuest->verifyPassword(password)) {
+                        cout << "Nieprawidłowe hasło! Liczba pozostałych prób: " << --attempts << "\n";
+                        if (attempts == 0) {
+                            cout << "Powrót do menu!\n";
+                            return;
+                        }
+                    } else {
+                        cout << "Udało się zalogować!";
+                        manageGuestProfile(loggingGuest);
+                        break;
+
+                    }
+                }
+                break;
+            }
+            case 2: {
+                string name;
+                string email;
+                string password;
+
+                // TODO Dodać weryfikacje poprawności maila
+                cout << "Podaj swoje imię i nazwisko: ";
+                cin >> name;
+                cout << "Podaj adres email: ";
+                cin >> email;
+                cout << "Podaj hasło: ";
+                cin >> password;
+                Guest newGuest(name, email, password);
+                hotel->addGuest(newGuest);
+                cout << "Udało się założyć konto, teraz się zaloguj!\n";
+
+                break;
+            }
+            case 3:
+                cout << "Wracam do menu\n";
+            break;
+            default:
+                cout << "Nieprawidłowy wybór. Spróbuj ponownie.\n";
+        }
+    }
 }
 
 // TODO Stworzyć wybór działań dla użytkownika
 void manageGuestProfile(Guest* guest) {
-    cout << "Zarządzenie gośćmi\n";
+    cout << "Zarządzenie swoim profilem\n";
 }
 
 
