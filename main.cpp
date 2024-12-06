@@ -34,8 +34,9 @@ public:
     Hotel(string n, string a, string chkInTime, string chkOutTime, string p)
         : name(n), address(a), checkInTime(chkInTime), checkOutTime(chkOutTime),password(p) {}
 
-    void addGuest(Guest& guest) { guests.push_back(&guest); }
+    void addGuest(Guest* guest) { guests.push_back(guest); }
     void addRoom(Room& room) { rooms.push_back(&room); }
+
 
     vector<Room*> getAvailableRooms(time_t startDate, time_t endDate, unsigned int peopleCount);
     vector<Reservation*> getAllReservations();
@@ -46,6 +47,7 @@ public:
 
     void displayRooms();
     void displayReservations();
+    void displayGuests();
 };
 
 class Room {
@@ -125,7 +127,7 @@ public:
 
     bool verifyPassword(const string& inputPassword) const { return password == inputPassword; }
     void addReservation(Reservation* reservation) { reservations.push_back(reservation); }
-
+    vector<int> getReseravitonIds();
     void displayReservations();
 };
 
@@ -251,6 +253,14 @@ void Hotel::displayReservations() {
     }
 }
 
+void Hotel::displayGuests() {
+    for (auto& guest : guests) {
+        string name = guest->getName();
+        cout << name << "\n";
+    }
+}
+
+
 void Guest::displayReservations() {
     if (reservations.empty()) {
         cout << "Brak rezerwacji.\n";
@@ -261,6 +271,15 @@ void Guest::displayReservations() {
         }
     }
 }
+
+vector<int> Guest::getReseravitonIds() {
+    vector<int> reservationIds;
+    for (auto& reservation:reservations){
+        reservationIds.push_back(reservation->reservationId);
+    }
+    return reservationIds;
+}
+
 
 string inputDate() {
     // uzytkownik podaje date jako string
@@ -289,7 +308,7 @@ time_t convertDate(string datetime) {
 
 void manageHotelProfile(Hotel* hotel);
 void manageGuestLogging(Hotel* hotel);
-void manageGuestProfile(Guest* guest);
+void manageGuestProfile(Guest* guest, Hotel* hotel);
 
 
 void displayMainManu(Hotel* hotel) {
@@ -354,6 +373,7 @@ void manageHotelProfile(Hotel* hotel) {
 
         switch (choice) {
             case 1:
+                hotel->displayGuests();
                 hotel->displayRooms();
                 break;
             case 2: {
@@ -370,6 +390,7 @@ void manageHotelProfile(Hotel* hotel) {
                 break;
                 }
             case 3:
+                // TODO NAprawić wyświetlanie rezerwacji, jeżeli utworzone są przez kilku użytkowników
                 hotel->displayReservations();
                 break;
             case 4: {
@@ -441,7 +462,7 @@ void manageGuestLogging(Hotel* hotel) {
                         }
                     } else {
                         cout << "Udało się zalogować!";
-                        manageGuestProfile(loggingGuest);
+                        manageGuestProfile(loggingGuest,hotel);
                         break;
 
                     }
@@ -460,7 +481,7 @@ void manageGuestLogging(Hotel* hotel) {
                 cin >> email;
                 cout << "Podaj hasło: ";
                 cin >> password;
-                Guest newGuest(name, email, password);
+                Guest* newGuest = new Guest(name, email, password);
                 hotel->addGuest(newGuest);
                 cout << "Udało się założyć konto, teraz się zaloguj!\n";
 
@@ -476,9 +497,96 @@ void manageGuestLogging(Hotel* hotel) {
 }
 
 // TODO Stworzyć wybór działań dla użytkownika
-void manageGuestProfile(Guest* guest) {
+void manageGuestProfile(Guest* guest, Hotel* hotel) {
     cout << "Zarządzenie swoim profilem\n";
-}
+    int choice;
+    while (choice != 5){
+        cout << "\n=== Profil hotelu ===\n";
+        cout << "1. Dokonaj rezerwacji\n";
+        cout << "2. Wyświetl swoje rezerwacje\n";
+        cout << "3. Odwołaj rezerwacje\n";
+        cout << "4. Zmień dane\n";
+        cout << "5. Powrót do głównego menu\n";
+        cout << "Twój wybór: ";
+        cin >> choice;
+
+        switch (choice) {
+            // Dokonaj rezerwacji
+            case 1: {
+
+
+                int peopleCount;
+                cout << "Podaj datę początku rezerwacji: ";
+                time_t startDate = convertDate(inputDate());
+                cout << "Podaj datę końca rezerwacji: ";
+                time_t endDate = convertDate(inputDate());
+                cout << "Podaj liczbę osób: ";
+                cin >> peopleCount;
+                cout << "Wybierz dostępny pokój: \n";
+                auto rooms = hotel->getAvailableRooms(startDate,endDate,peopleCount);
+                for (auto& room : rooms) {room->displayDetails();}
+                string roomNumber;
+                cout << "Podaj numer pokoju: \n";
+                cin >> roomNumber;
+                bool check = false;
+                for (auto& room : rooms) {
+                    if (room->getRoomNumber() == roomNumber) {
+                        auto chosenRoom = room;
+                        auto* new_reservation = new Reservation(guest,startDate,endDate,chosenRoom);
+                        guest->addReservation(new_reservation);
+
+                        check = true;
+                        cout << "Pomyślnie dokonano rezerwacji!\n";
+                        break;
+                    }
+                }
+                if (!check) {
+                    cout << "Błędny numer pokoju, spróbuj jeszcze raz.\n";
+                }
+
+                    break;
+                }
+                // Wyświetl swoje rezerwacje
+                case 2: {
+                    guest->displayReservations();
+                    break;
+                }
+                // Odwołaj rezerwacje
+                case 3: {
+                int reserrvationIdToDelete;
+                guest->displayReservations();
+                cout << "Podaj numer rezerwacji do anulowania: ";
+                cin >> reserrvationIdToDelete;
+                auto allReservations = hotel->getAllReservations();
+                vector<int> reservationIds = guest->getReseravitonIds();
+                for (auto& reservation : allReservations) {
+                    if (find(reservationIds.begin(),reservationIds.end(),reserrvationIdToDelete) != reservationIds.end()) {
+                        if (reserrvationIdToDelete==reservation->reservationId) {
+                            reservation->cancel();
+                            break;
+                        }
+                    } else {
+
+                            cout << "Nie posiadzasz rezerwacji o podanym ID: " << reserrvationIdToDelete << "\n";
+                            break;
+                        }
+                    }
+
+                break;
+            }
+                // TODO Zmień dane
+                case 4: {
+                    break;
+                }
+                case 5: {
+                    cout << "Powrót do głównego menu\n";
+                    break;
+                }
+                default:
+                    cout << "Nieprawidłowy wybór. Spróbuj ponownie.\n";
+            }
+        }
+    }
 
 
 int main() {
@@ -488,13 +596,15 @@ int main() {
     Room room3("103", "Standard", 300, 4);
     Room room4("104", "Deluxe", 600, 5);
     Guest guest1("Jan Kowalski", "jankowalski@gmail.com", "haslo123");
+    Guest guest2("Paweł Nowak", "asd", "asd");
     Hotel hotel("Słoneczny młyn", "Portowa 5", "15:00:00", "10:00:00","admin123");
 
     hotel.addRoom(room1);
     hotel.addRoom(room2);
     hotel.addRoom(room3);
     hotel.addRoom(room4);
-    hotel.addGuest(guest1);
+    hotel.addGuest(&guest1);
+    hotel.addGuest(&guest2);
 
     // nwm czy to ma sens chcialem ukryc dobe hotelowa w klasie
     string checkInTime = hotel.getCheckInTime();
@@ -537,6 +647,23 @@ int main() {
         auto chosenRoom = availableRooms[0];
         auto reservation2 = new Reservation(&guest1, startDate, endDate, chosenRoom);
         guest1.addReservation(reservation2);
+        chosenRoom->bookRoom(startDate, endDate);
+
+        // cout << "Rezerwacja pomyślna!\n";
+    }
+
+    availableRooms = hotel.getAvailableRooms(startDate, endDate, 2);
+    // debug
+    cout << "dostepne: ";
+    for (auto room : availableRooms) {
+        cout << room->getRoomNumber() << " ";
+    }
+    cout << "\n";
+    //
+    if (!availableRooms.empty()) {
+        auto chosenRoom = availableRooms[0];
+        auto reservation3 = new Reservation(&guest2, startDate, endDate, chosenRoom);
+        guest2.addReservation(reservation3);
         chosenRoom->bookRoom(startDate, endDate);
 
         // cout << "Rezerwacja pomyślna!\n";
