@@ -5,6 +5,7 @@
 #include <ctime>
 #include <memory>
 #include <iomanip>
+#include <limits>
 #include <regex>
 
 using namespace std;
@@ -119,6 +120,10 @@ public:
 
     Guest(string guestName, string guestEmail, string guestPassword)
         : guestId(nextGuestId++), name(guestName), email(guestEmail), password(guestPassword) {}
+
+    void setName(string name) { this->name = name; }
+    void setEmail(string email) { this->email = email; }
+    void setPassword(string password) { this->password = password; }
 
     string getName() const { return name; }
     string getEmail() const { return email; }
@@ -280,6 +285,27 @@ vector<int> Guest::getReseravitonIds() {
     return reservationIds;
 }
 
+#include <iostream>
+#include <string>
+#include <regex>
+
+using namespace std;
+
+string inputMail() {
+    string email;
+    regex emailRegex(R"((^[^\s@]+@[^\s@]+\.[^\s@]+$))"); 
+
+    while (true) {
+        cout << "Podaj swój adres e-mail: ";
+        cin >> email;
+
+        if (regex_match(email, emailRegex)) {
+            return email;
+        } else {
+            cout << "Niepoprawny format adresu e-mail. Sprobuj ponownie.\n";
+        }
+    }
+}
 
 string inputDate() {
     // uzytkownik podaje date jako string
@@ -312,7 +338,7 @@ void manageGuestProfile(Guest* guest, Hotel* hotel);
 
 
 void displayMainManu(Hotel* hotel) {
-    int choice;
+    int choice = 0;
 
     while (choice!=3) {
         cout << "\n=== Witaj w aplikacji hotelowej ===\n";
@@ -343,7 +369,7 @@ void displayMainManu(Hotel* hotel) {
 void manageHotelProfile(Hotel* hotel) {
     string password;
     string adminPassword = hotel->getPassword();
-    int choice;
+    int choice = 0;
     int attempts = 3;
     while (attempts>0) {
         cout << "\nPodaj hasło administratora: ";
@@ -378,9 +404,9 @@ void manageHotelProfile(Hotel* hotel) {
                 break;
             case 2: {
                 cout << "Podaj datę początku rezerwacji\n";
-                time_t startDate = convertDate(inputDate());
+                time_t startDate = convertDate(inputDate() + string(" ") + hotel->getCheckInTime());
                 cout << "Podaj datę końca rezerwacji\n";
-                time_t endDate = convertDate(inputDate());
+                time_t endDate = convertDate(inputDate() + string(" ") + hotel->getCheckOutTime());
 
                 auto rooms = hotel->getAvailableRooms(startDate,endDate,1);
                 cout << "Lista wszystkich pokoi:\n";
@@ -390,7 +416,6 @@ void manageHotelProfile(Hotel* hotel) {
                 break;
                 }
             case 3:
-                // TODO NAprawić wyświetlanie rezerwacji, jeżeli utworzone są przez kilku użytkowników
                 hotel->displayReservations();
                 break;
             case 4: {
@@ -417,10 +442,10 @@ void manageHotelProfile(Hotel* hotel) {
 }
 
 void manageGuestLogging(Hotel* hotel) {
-    int choice;
+    int choice = 0;
 
     while (choice!=3) {
-        cout << "\n=== Witaj w aplikacji hotelowej ===\n";
+        cout << "\n=== Wybierz działanie ===\n";
         cout << "1. Zaloguj się na swoje konto\n";
         cout << "2. Utwórz nowe konto\n";
         cout << "3. Powrót do menu\n";
@@ -435,8 +460,7 @@ void manageGuestLogging(Hotel* hotel) {
                 bool check = false;
                 auto guests=hotel->getGuests();
                 cout << "Logowanie do konta\n";
-                cout << "Podaj swój adres email: ";
-                cin >> email;
+                email = inputMail();
                 for (auto& guest : guests) {
                     if (email == guest->getEmail()) {
                         loggingGuest = guest;
@@ -474,11 +498,11 @@ void manageGuestLogging(Hotel* hotel) {
                 string email;
                 string password;
 
-                // TODO Dodać weryfikacje poprawności maila
+
                 cout << "Podaj swoje imię i nazwisko: ";
-                cin >> name;
-                cout << "Podaj adres email: ";
-                cin >> email;
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                getline(cin, name);
+                email=inputMail();
                 cout << "Podaj hasło: ";
                 cin >> password;
                 Guest* newGuest = new Guest(name, email, password);
@@ -496,12 +520,12 @@ void manageGuestLogging(Hotel* hotel) {
     }
 }
 
-// TODO Stworzyć wybór działań dla użytkownika
+// TODO Przemyśleć, czy potrzebne są jakieś jeszcze działania?
 void manageGuestProfile(Guest* guest, Hotel* hotel) {
     cout << "Zarządzenie swoim profilem\n";
-    int choice;
+    int choice = 0;
     while (choice != 5){
-        cout << "\n=== Profil hotelu ===\n";
+        cout << "\n=== Profil Użytkownika ===\n";
         cout << "1. Dokonaj rezerwacji\n";
         cout << "2. Wyświetl swoje rezerwacje\n";
         cout << "3. Odwołaj rezerwacje\n";
@@ -517,9 +541,9 @@ void manageGuestProfile(Guest* guest, Hotel* hotel) {
 
                 int peopleCount;
                 cout << "Podaj datę początku rezerwacji: ";
-                time_t startDate = convertDate(inputDate());
+                time_t startDate = convertDate(inputDate() + string(" ") + hotel->getCheckInTime());
                 cout << "Podaj datę końca rezerwacji: ";
-                time_t endDate = convertDate(inputDate());
+                time_t endDate = convertDate(inputDate() + string(" ") + hotel->getCheckOutTime());
                 cout << "Podaj liczbę osób: ";
                 cin >> peopleCount;
                 cout << "Wybierz dostępny pokój: \n";
@@ -574,8 +598,63 @@ void manageGuestProfile(Guest* guest, Hotel* hotel) {
 
                 break;
             }
-                // TODO Zmień dane
+
                 case 4: {
+                cout << "Zmiana danych użytkownika\n";
+                int choice2 = 0;
+                while (choice2!=5) {
+
+                    cout << "\n=== Profil Użytkownika ===\n";
+                    cout << "1. Wyświetl dane\n";
+                    cout << "2. Zmień imię i nazwisko\n";
+                    cout << "3. Zmień adres e-mail\n";
+                    cout << "4. Zmień hasło\n";
+                    cout << "5. Powrót\n";
+                    cout << "Twój wybór: ";
+                    cin >> choice2;
+                    switch (choice2) {
+                        case 1: {
+                            cout << "Imię i Nazwiko: " << guest->getName() << "\n"
+                            << "Adres e-mail: "<< guest->getEmail() << "\n";
+                            break;
+                        }
+                        case 2: {
+                            string name;
+                            cout << "Podaj imię i nazwisko na jakie chcesz zmienić: ";
+                            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                            getline(cin, name);
+                            guest->setName(name);
+                            break;
+                        }
+                        case 3: {
+                            cout << "Podaj adres e-mail na jaki chcesz zmienić: ";
+                            string email = inputMail();
+                            guest->setEmail(email);
+                            break;
+                        }
+                        case 4: {
+                            string password;
+                            string newPassword;
+                            cout << "Podaj swoje hasło: ";
+                            cin >> password;
+                            if (guest->verifyPassword(password)) {
+                                cout << "Podaj nowe hasło: ";
+                                cin >> newPassword;
+                                guest->setPassword(newPassword);
+                            } else {
+                                cout << "Błędne hasło. Spróbuj jeszcze raz\n";
+                                break;
+                            }
+                            break;
+                        }
+                        case 5: {
+                            break;
+                        }
+                        default:
+                            cout << "Nieprawidłowy wybór. Spróbuj ponownie.\n";
+
+                    }
+                }
                     break;
                 }
                 case 5: {
