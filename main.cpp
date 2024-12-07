@@ -103,8 +103,8 @@ public:
     }
 
     void displayDetails() {
-        cout << "Pokój " << roomNumber << " (" << standard << "), Cena: " << pricePerNight
-            << " zł, Max osób: " << maxAmountOfPeople << "\n";
+        cout << "Pok\242j " << roomNumber << " (" << standard << "), Cena: " << pricePerNight
+            << " z\210, Max os\242b: " << maxAmountOfPeople << "\n";
     }
 };
 
@@ -171,8 +171,8 @@ public:
         // ^
 
         cout << "Rezerwacja #" << reservationId
-            << " dla " << guest->getName() << ". Pokój: " << room->getRoomNumber()
-            << ", Cena: " << totalPrice << " zł, \nod "
+            << " dla " << guest->getName() << ". Pok\242j: " << room->getRoomNumber()
+            << ", Cena: " << totalPrice << " z\210, \nod "
             << start << " do " << end
             << ",\nstatus: " << status << "\n\n";
     }
@@ -203,7 +203,7 @@ public:
     CardPayment(double amount) : Payment(amount) {}
 
     void processPayment() override {
-        cout << "Płatność kartą. Kwota: " << amount << " zł\n";
+        cout << "P\210atno\230\206 kart\245. Kwota: " << amount << " z\210\n";
     }
 };
 
@@ -212,7 +212,7 @@ public:
     CashPayment(double amount) : Payment(amount) {}
 
     void processPayment() override {
-        cout << "Płatność gotówką. Kwota: " << amount << " zł\n";
+        cout << "P\210atno\230\206 got\242wk\245. Kwota: " << amount << " z\210\n";
     }
 };
 
@@ -281,12 +281,21 @@ vector<int> Guest::getReservationIds() {
     return reservationIds;
 }
 
+void waitForEnter() {
+
+    cin.clear();
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+
+    cout << "Aby przej\230\206 dalej naci\230nij ENTER";
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+}
+
 string inputMail() {
     string email;
-    regex emailRegex(R"((^[^\s@]+@[^\s@]+\.[^\s@]+$))"); 
+    regex emailRegex(R"((^[^\s@]+@[^\s@]+\.[^\s@]+$))");
 
     while (true) {
-        cout << "Podaj swój adres e-mail: ";
+        cout << "Podaj sw\242j adres e-mail: ";
         cin >> email;
 
         if (regex_match(email, emailRegex)) {
@@ -309,7 +318,7 @@ string inputDate() {
         if (regex_match(date, datePattern)) {
             return date;
         } else {
-            cout << "Nieprawidłowy format daty. Spróbuj ponownie.\n";
+            cout << "Nieprawid\210owy format daty. Spr\242buj ponownie.\n";
         }
     }
 }
@@ -329,11 +338,12 @@ void displayMainManu(Hotel* hotel) {
     int choice = 0;
 
     while (choice != 3) {
+        system("cls");
         cout << "\n=== Witaj w aplikacji hotelowej ===\n";
         cout << "1. Profil hotelu\n";
-        cout << "2. Profil gościa\n";
-        cout << "3. Zakończ\n";
-        cout << "Twój wybór: ";
+        cout << "2. Profil go\230cia\n";
+        cout << "3. Zako\344cz\n";
+        cout << "Tw\242j wyb\242r: ";
         cin >> choice;
 
         switch (choice) {
@@ -342,14 +352,14 @@ void displayMainManu(Hotel* hotel) {
                 manageHotelProfile(hotel);
                 break;
             case 2:
-                cout << "Profil gościa\n";
+                cout << "Profil go\230cia\n";
                 manageGuestLogin(hotel);
                 break;
             case 3:
                 cout << "Do widzenia!\n";
                 break;
             default:
-                cout << "Nieprawidłowy wybór. Spróbuj ponownie.\n";
+                cout << "Nieprawid\210owy wyb\242r. Spr\242buj ponownie.\n";
         }
     }
 }
@@ -360,13 +370,13 @@ void manageHotelProfile(Hotel* hotel) {
     int choice = 0;
     int attempts = 3;
     while (attempts > 0) {
-        cout << "\nPodaj hasło administratora: ";
+        cout << "\nPodaj has\210o administratora: ";
         cin >> password;
 
         if (password != adminPassword) {
-            cout << "Nieprawidłowe hasło! Liczba pozostałych prób: " << --attempts << "\n";
+            cout << "Nieprawid\210owe has\210o! Liczba pozosta\210ych pr\242b: " << --attempts << "\n";
             if (attempts == 0) {
-                cout << "Powrót do menu!\n";
+                cout << "Powr\242t do menu!\n";
                 return;
             }
         } else {
@@ -377,24 +387,27 @@ void manageHotelProfile(Hotel* hotel) {
     // TODO: Przemyśleć czy jeszcze jakieś działania są potrzebne?.
     // TODO? moze dodawanie/usuwanie pokoi
     while (choice != 5){
+        system("cls");
         cout << "\n=== Profil hotelu ===\n";
-        cout << "1. Wyświetl wszystkie pokoje\n";
-        cout << "2. Sprawdź dostępność pokoi\n";
-        cout << "3. Wyświetl rezerwacje\n";
+        cout << "1. Wy\230wietl wszystkie pokoje\n";
+        cout << "2. Sprawd\253 dost\251pno\230\206 pokoi\n";
+        cout << "3. Wy\230wietl rezerwacje\n";
         cout << "4. Anuluj rezerwacje\n";
-        cout << "5. Powrót do głównego menu\n";
-        cout << "Twój wybór: ";
+        cout << "5. Powr\242t do g\210\242wnego menu\n";
+        cout << "Tw\242j wyb\242r: ";
         cin >> choice;
 
         switch (choice) {
-            case 1:
+            case 1: {
                 hotel->displayGuests();
                 hotel->displayRooms();
+                waitForEnter();
                 break;
+            }
             case 2: {
-                cout << "Podaj datę początku rezerwacji\n";
+                cout << "Podaj dat\251 pocz\245tku rezerwacji\n";
                 time_t startDate = convertDate(inputDate() + string(" ") + hotel->getCheckInTime());
-                cout << "Podaj datę końca rezerwacji\n";
+                cout << "Podaj dat\251 ko\344ca rezerwacji\n";
                 time_t endDate = convertDate(inputDate() + string(" ") + hotel->getCheckOutTime());
 
                 auto rooms = hotel->getAvailableRooms(startDate, endDate, 1);
@@ -402,10 +415,12 @@ void manageHotelProfile(Hotel* hotel) {
                 for (auto& room : rooms) {
                     room->displayDetails();
                 }
+                waitForEnter();
                 break;
             }
             case 3:
                 hotel->displayReservations();
+                waitForEnter();
                 break;
             case 4: {
                 hotel->displayReservations();
@@ -415,7 +430,7 @@ void manageHotelProfile(Hotel* hotel) {
                 if (!allReservations.empty()) {
                     std::cout << "Podaj numer rezerwacji do anulowania: ";
                     cin >> reservationId;
-                }   
+                }
 
                 for (auto& reservation : allReservations) {
                     if (reservationId == reservation->reservationId) {
@@ -423,13 +438,16 @@ void manageHotelProfile(Hotel* hotel) {
                         break;
                     }
                 }
+                waitForEnter();
                 break;
             }
             case 5:
-                cout << "Powrót do głównego menu\n";
+                cout << "Powr\242t do g\210\242wnego menu\n";
                 break;
-            default:
-                cout << "Nieprawidłowy wybór. Spróbuj ponownie.\n";
+            default: {
+                cout << "Nieprawid\210owy wyb\242r. Spr\242buj ponownie.\n";
+                waitForEnter();
+            }
         }
     }
 }
@@ -438,11 +456,12 @@ void manageGuestLogin(Hotel* hotel) {
     int choice = 0;
 
     while (choice != 3) {
-        cout << "\n=== Wybierz działanie ===\n";
-        cout << "1. Zaloguj się na swoje konto\n";
-        cout << "2. Utwórz nowe konto\n";
-        cout << "3. Powrót do menu\n";
-        cout << "Twój wybór: ";
+        system("cls");
+        cout << "\n=== Wybierz dzia\210anie ===\n";
+        cout << "1. Zaloguj si\251 na swoje konto\n";
+        cout << "2. Utw\242rz nowe konto\n";
+        cout << "3. Powr\242t do menu\n";
+        cout << "Tw\242j wyb\242r: ";
         cin >> choice;
 
         switch (choice) {
@@ -463,22 +482,25 @@ void manageGuestLogin(Hotel* hotel) {
                 }
                 if (!check) {
                     cout << "Konto o podanym adresie email nie istnieje\n";
+                    waitForEnter();
                     break;
                 }
 
                 int attempts = 3;
                 while (attempts > 0) {
-                    cout << "Podaj hasło: ";
+                    cout << "Podaj has\210o: ";
                     cin >> password;
 
                     if (!loggingGuest->verifyPassword(password)) {
-                        cout << "Nieprawidłowe hasło! Liczba pozostałych prób: " << --attempts << "\n";
+                        cout << "Nieprawid\210owe has\210o! Liczba pozosta\210ych pr\242b: " << --attempts << "\n";
                         if (attempts == 0) {
-                            cout << "Powrót do menu!\n";
+                            cout << "Powr\242t do menu!\n";
+                            waitForEnter();
                             return;
                         }
                     } else {
-                        cout << "Udało się zalogować!";
+                        cout << "Uda\210o si\251 zalogowa\206!\n";
+                        waitForEnter();
                         manageGuestProfile(loggingGuest,hotel);
                         break;
                     }
@@ -490,15 +512,15 @@ void manageGuestLogin(Hotel* hotel) {
                 string email;
                 string password;
 
-                cout << "Podaj swoje imię i nazwisko: ";
+                cout << "Podaj swoje imi\251 i nazwisko: ";
                 cin.ignore(numeric_limits<streamsize>::max(), '\n');
                 getline(cin, name);
                 email = inputMail();
-                cout << "Podaj hasło: ";
+                cout << "Podaj has\210o: ";
                 cin >> password;
                 Guest* newGuest = new Guest(name, email, password);
                 hotel->addGuest(newGuest);
-                cout << "Udało się założyć konto, teraz się zaloguj!\n";
+                cout << "Uda\210o si\251 za\210o\276y\206 konto, teraz si\251 zaloguj!\n";
 
                 break;
             }
@@ -506,38 +528,39 @@ void manageGuestLogin(Hotel* hotel) {
                 cout << "Wracam do menu\n";
                 break;
             default:
-                cout << "Nieprawidłowy wybór. Spróbuj ponownie.\n";
+                cout << "Nieprawid\210owy wyb\242r. Spr\242buj ponownie.\n";
         }
     }
 }
 
 // TODO: Przemyśleć, czy potrzebne są jakieś jeszcze działania?
 void manageGuestProfile(Guest* guest, Hotel* hotel) {
-    cout << "Zarządzenie swoim profilem\n";
+    cout << "Zarz\245dzenie swoim profilem\n";
     int choice = 0;
     while (choice != 6){
-        cout << "\n=== Profil Użytkownika ===\n";
+        system("cls");
+        cout << "\n=== Profil U\276ytkownika ===\n";
         cout << "1. Dokonaj rezerwacji\n";
-        cout << "2. Wyświetl swoje rezerwacje\n";
-        cout << "3. Odwołaj rezerwacje\n";
+        cout << "2. Wy\230wietl swoje rezerwacje\n";
+        cout << "3. Odwo\210aj rezerwacje\n";
         cout << "4. Oplac rezerwacje\n";
-        cout << "5. Zmień dane\n";
-        cout << "6. Powrót do głównego menu\n";
-        cout << "Twój wybór: ";
+        cout << "5. Zmie\344 dane\n";
+        cout << "6. Powr\242t do g\210\242wnego menu\n";
+        cout << "Tw\242j wyb\242r: ";
         cin >> choice;
 
         switch (choice) {
             // dokonanie rezerwacji
             case 1: {
                 int peopleCount;
-                cout << "Podaj datę początku rezerwacji: ";
+                cout << "Podaj dat\251 pocz\245tku rezerwacji: ";
                 time_t startDate = convertDate(inputDate() + string(" ") + hotel->getCheckInTime());
-                cout << "Podaj datę końca rezerwacji: ";
+                cout << "Podaj dat\251 ko\344ca rezerwacji: ";
                 time_t endDate = convertDate(inputDate() + string(" ") + hotel->getCheckOutTime());
-                cout << "Podaj liczbę osób: ";
+                cout << "Podaj liczb\251 os\242b: ";
                 cin >> peopleCount;
 
-                cout << "Wybierz dostępny pokój: \n";
+                cout << "Wybierz dost\251pny pok\242j: \n";
                 auto rooms = hotel->getAvailableRooms(startDate, endDate, peopleCount);
                 for (auto& room : rooms) room->displayDetails(); //
                 string roomNumber;
@@ -551,12 +574,14 @@ void manageGuestProfile(Guest* guest, Hotel* hotel) {
                         guest->addReservation(new_reservation);
 
                         check = true;
-                        cout << "Pomyślnie dokonano rezerwacji! Calkowita cena: " << new_reservation->getTotalPrice() << "zl\n";
+                        cout << "Pomy\230lnie dokonano rezerwacji! Calkowita cena: " << new_reservation->getTotalPrice() << "zl\n";
+                        waitForEnter();
                         break;
                     }
                 }
                 if (!check) {
-                    cout << "Błędny numer pokoju, spróbuj jeszcze raz.\n";
+                    cout << "B\210\251dny numer pokoju, spr\242buj jeszcze raz.\n";
+                    waitForEnter();
                 }
 
                 break;
@@ -564,10 +589,11 @@ void manageGuestProfile(Guest* guest, Hotel* hotel) {
             // wyswietlenie rezerwacji uzytkownika
             case 2: {
                 guest->displayReservations();
+                waitForEnter();
                 break;
             }
             // odwolanie rezerwacji
-            case 3: { 
+            case 3: {
                 guest->displayReservations();
                 auto allReservations = hotel->getAllReservations();
                 vector<int> reservationIds = guest->getReservationIds();
@@ -577,7 +603,7 @@ void manageGuestProfile(Guest* guest, Hotel* hotel) {
                     cout << "Podaj numer rezerwacji do anulowania: ";
                     cin >> reservationIdToDelete;
                 }
-                
+
                 for (auto& reservation : allReservations) {
                     if (find(reservationIds.begin(), reservationIds.end(), reservationIdToDelete) != reservationIds.end()) {
                         if (reservationIdToDelete == reservation->reservationId) {
@@ -586,6 +612,7 @@ void manageGuestProfile(Guest* guest, Hotel* hotel) {
                         }
                     } else {
                         cout << "Nie posiadzasz rezerwacji o podanym ID: " << reservationIdToDelete << "\n";
+                        waitForEnter();
                         break;
                     }
                 }
@@ -593,7 +620,7 @@ void manageGuestProfile(Guest* guest, Hotel* hotel) {
                 break;
             }
             // oplacenie rezerwacji
-            case 4: { 
+            case 4: {
                 vector<Reservation*> reservations = guest->getReservations();
                 Reservation* chosenReservation;
                 int reservation_num = reservations.size();
@@ -601,11 +628,11 @@ void manageGuestProfile(Guest* guest, Hotel* hotel) {
                     cout << "Uzytkownik nie ma rezerwacji.\n";
                     break;
                 }
-                
+
                 int payFor;
                 cout << "\nPodaj id rezerwacji do oplacenia\n";
                 guest->displayReservations();
-                cout << "Twój wybór: ";
+                cout << "Tw\242j wyb\242r: ";
                 cin >> payFor;
 
                 bool alreadyPaid = false;
@@ -613,7 +640,7 @@ void manageGuestProfile(Guest* guest, Hotel* hotel) {
                     if (reservation->reservationId == payFor) {
                         chosenReservation = reservation;
                         if (chosenReservation->getStatus() == "oplacona") alreadyPaid = true;
-                        break;                        
+                        break;
                     }
                 }
                 if(alreadyPaid) {
@@ -626,7 +653,7 @@ void manageGuestProfile(Guest* guest, Hotel* hotel) {
                 cout << "1. Platnosc karta\n";
                 cout << "2. Platnosc gotowka\n";
                 cout << "3. Powrot\n";
-                cout << "Twój wybór: ";
+                cout << "Tw\242j wyb\242r: ";
                 cin >> choice2;
 
                 switch (choice2) {
@@ -652,34 +679,37 @@ void manageGuestProfile(Guest* guest, Hotel* hotel) {
             }
             // zmiana danych uzytkownika
             case 5: {
-                cout << "Zmiana danych użytkownika\n";
+
+                cout << "Zmiana danych u\276ytkownika\n";
                 int choice2 = 0;
                 while (choice2 != 5) {
-                    cout << "\n=== Profil Użytkownika ===\n";
-                    cout << "1. Wyświetl dane\n";
-                    cout << "2. Zmień imię i nazwisko\n";
-                    cout << "3. Zmień adres e-mail\n";
-                    cout << "4. Zmień hasło\n";
-                    cout << "5. Powrót\n";
-                    cout << "Twój wybór: ";
+                    system("cls");
+                    cout << "\n=== Profil U\276ytkownika ===\n";
+                    cout << "1. Wy\230wietl dane\n";
+                    cout << "2. Zmie\344 imi\251 i nazwisko\n";
+                    cout << "3. Zmie\344 adres e-mail\n";
+                    cout << "4. Zmie\344 has\210o\n";
+                    cout << "5. Powr\242t\n";
+                    cout << "Tw\242j wyb\242r: ";
                     cin >> choice2;
 
                     switch (choice2) {
                         case 1: {
-                            cout << "Imię i Nazwiko: " << guest->getName() << "\n"
+                            cout << "Imi\251 i Nazwiko: " << guest->getName() << "\n"
                             << "Adres e-mail: "<< guest->getEmail() << "\n";
+                            waitForEnter();
                             break;
                         }
                         case 2: {
                             string name;
-                            cout << "Podaj imię i nazwisko na jakie chcesz zmienić: ";
+                            cout << "Podaj imi\251 i nazwisko na jakie chcesz zmieni\206: ";
                             cin.ignore(numeric_limits<streamsize>::max(), '\n');
                             getline(cin, name);
                             guest->setName(name);
                             break;
                         }
                         case 3: {
-                            cout << "Podaj adres e-mail na jaki chcesz zmienić: ";
+                            cout << "Podaj adres e-mail na jaki chcesz zmieni\206: ";
                             string email = inputMail();
                             guest->setEmail(email);
                             break;
@@ -687,24 +717,25 @@ void manageGuestProfile(Guest* guest, Hotel* hotel) {
                         case 4: {
                             string password;
                             string newPassword;
-                            cout << "Podaj swoje hasło: ";
+                            cout << "Podaj swoje has\210o: ";
                             cin >> password;
                             if (guest->verifyPassword(password)) {
-                                cout << "Podaj nowe hasło: ";
+                                cout << "Podaj nowe has\210o: ";
                                 cin >> newPassword;
                                 guest->setPassword(newPassword);
                             } else {
-                                cout << "Błędne hasło. Spróbuj jeszcze raz\n";
+                                cout << "B\210\251dne has\210o. Spr\242buj jeszcze raz\n";
+                                waitForEnter();
                                 break;
                             }
                             break;
                         }
                         case 5: {
-                            cout << "Powrót do głównego menu\n";
+                            cout << "Powr\242t do g\210\242wnego menu\n";
                             break;
                         }
                         default:
-                            cout << "Nieprawidłowy wybór. Spróbuj ponownie.\n";
+                            cout << "Nieprawid\210owy wyb\242r. Spr\242buj ponownie.\n";
                     }
                 }
                 break;
@@ -717,13 +748,13 @@ void manageGuestProfile(Guest* guest, Hotel* hotel) {
 int main() {
     // TODO: cls w terminalu i usuniecie wszystkich znakow polskich
 
-    Hotel hotel("Słoneczny młyn", "Portowa 5", "15:00:00", "10:00:00", "admin123");
+    Hotel hotel("S\210oneczny m\210yn", "Portowa 5", "15:00:00", "10:00:00", "admin123");
     Room room1("101", "Standard", 200, 2);
     Room room2("102", "Deluxe", 300, 3);
     Room room3("103", "Standard", 300, 4);
     Room room4("104", "Deluxe", 600, 5);
     Guest guest1("Jan Kowalski", "jankowalski@gmail.com", "haslo123");
-    Guest guest2("Paweł Nowak", "asd@gmail.com", "asd");
+    Guest guest2("Pawe\210 Nowak", "asd@gmail.com", "asd");
 
     hotel.addRoom(room1);
     hotel.addRoom(room2);
@@ -751,14 +782,14 @@ int main() {
 //         cout << room->getRoomNumber() << " ";
 //     }
 //     cout << "\n";
-    
+
 //     if (!availableRooms.empty()) {
 //         auto chosenRoom = availableRooms[0];
 //         auto reservation1 = new Reservation(&guest1, startDate, endDate, chosenRoom);
 //         guest1.addReservation(reservation1);
 //         chosenRoom->bookRoom(startDate, endDate);
 
-//         // cout << "Rezerwacja pomyślna!\n";
+//         // cout << "Rezerwacja pomy\230lna!\n";
 //     }
 //     hotel.displayReservations();
 
@@ -768,7 +799,7 @@ int main() {
 //         cout << room->getRoomNumber() << " ";
 //     }
 //     cout << "\n";
-    
+
 //     if (!availableRooms.empty()) {
 //         auto chosenRoom = availableRooms[0];
 //         auto reservation2 = new Reservation(&guest1, startDate, endDate, chosenRoom);
