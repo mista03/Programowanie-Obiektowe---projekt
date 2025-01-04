@@ -163,13 +163,11 @@ public:
     void displayDetails() {
         char start[64], end[64];
 
-        // v TODO: mozna by ujednolicic z get_time, czyli tutaj put_time
         struct tm* datetime1 = localtime(&startDate);
         strftime(start, 64, "%Y-%m-%d %H:%M", datetime1);
 
         struct tm* datetime2 = localtime(&endDate);
         strftime(end, 64, "%Y-%m-%d %H:%M", datetime2);
-        // ^
 
         cout << "Rezerwacja #" << reservationId
             << " dla " << guest->getName() << ". Pokój: " << room->getRoomNumber()
@@ -307,19 +305,56 @@ string inputMail() {
     }
 }
 
+bool isValidDate(int year, int month, int day) {
+    if (month == 1 || month == 3 || month == 5 || month == 7 || month == 8 || month == 10 || month == 12) {
+        return day >= 1 && day <= 31;
+    } else if (month == 4 || month == 6 || month == 9 || month == 11) {
+        return day >= 1 && day <= 30;
+    } else if (month == 2) {
+        bool isLeapYear = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+        return day >= 1 && day <= (isLeapYear ? 29 : 28);
+    }
+    return false;
+}
+
+bool isFutureDate(int year, int month, int day) {
+    time_t t = time(nullptr);
+    tm *currentTime = localtime(&t);
+
+    int currentYear = currentTime->tm_year + 1900;
+    int currentMonth = currentTime->tm_mon + 1;
+    int currentDay = currentTime->tm_mday;
+
+    if (year > currentYear) {
+        return true;
+    } else if (year == currentYear) {
+        if (month > currentMonth) {
+            return true;
+        } else if (month == currentMonth) {
+            return day >= currentDay;
+        }
+    }
+    return false;
+}
+
 string inputDate() {
-    // uzytkownik podaje date jako string
     string date;
-    // TODO: wykrywac nieprawidlowe daty, np. 2025-02-31, 2025-31-31
     regex datePattern(R"(\d{4}-\d{2}-\d{2})"); // YYYY-MM-DD
 
-    // sprawdzanie regex daty, ewentualna prosba o ponowne podanie
+    // sprawdzanie poprawnosci daty, ewentualna prosba o ponowne podanie
     while (true) {
         cin >> date;
-        if (regex_match(date, datePattern)) {
+        
+        int year, month, day;
+        sscanf(date.c_str(), "%d-%d-%d", &year, &month, &day);
+
+        bool validFormat = regex_match(date, datePattern);
+        bool inTheFuture = isFutureDate(year, month, day);
+        bool dateExists = isValidDate(year, month, day);
+        if (validFormat && inTheFuture && dateExists) {
             return date;
         } else {
-            cout << "Nieprawidłowy format daty. Spróbuj ponownie.\n";
+            cout << "Nieprawidłowa data. Spróbuj ponownie.\n";
         }
     }
 }
@@ -404,15 +439,17 @@ void manageHotelProfile(Hotel* hotel) {
                 break;
             }
             case 2: {
-                cout << "Podaj datę początku rezerwacji\n";
+                cout << "Podaj datę początku rezerwacji (YYYY-MM-DD)\n";
                 time_t startDate = convertDate(inputDate() + string(" ") + hotel->getCheckInTime());
-                cout << "Podaj datę końca rezerwacji\n";
+                cout << "Podaj datę końca rezerwacji (YYYY-MM-DD)\n";
                 time_t endDate = convertDate(inputDate() + string(" ") + hotel->getCheckOutTime());
 
                 auto rooms = hotel->getAvailableRooms(startDate, endDate, 1);
-                cout << "Lista wszystkich pokoi:\n";
-                for (auto& room : rooms) {
-                    room->displayDetails();
+                if (rooms.size() > 0) {
+                    cout << "Lista wszystkich pokoi:\n";
+                    for (auto& room : rooms) room->displayDetails();
+                } else {
+                    cout << "Brak dostępnych pokoi\n";
                 }
                 waitForEnter();
                 break;
@@ -551,16 +588,23 @@ void manageGuestProfile(Guest* guest, Hotel* hotel) {
             // dokonanie rezerwacji
             case 1: {
                 int peopleCount;
-                cout << "Podaj datę początku rezerwacji: ";
+                cout << "Podaj datę początku rezerwacji (YYYY-MM-DD): ";
                 time_t startDate = convertDate(inputDate() + string(" ") + hotel->getCheckInTime());
-                cout << "Podaj datę końca rezerwacji: ";
+                cout << "Podaj datę końca rezerwacji (YYYY-MM-DD): ";
                 time_t endDate = convertDate(inputDate() + string(" ") + hotel->getCheckOutTime());
                 cout << "Podaj liczbę osób: ";
                 cin >> peopleCount;
 
-                cout << "Wybierz dostępny pokój: \n";
                 auto rooms = hotel->getAvailableRooms(startDate, endDate, peopleCount);
-                for (auto& room : rooms) room->displayDetails(); //
+                if (rooms.size() > 0) {
+                    cout << "Wybierz dostępny pokój: \n";
+                    for (auto& room : rooms) room->displayDetails();
+                } else {
+                    cout << "Brak dostępnych pokoi\n";
+                    waitForEnter();
+                    break;
+                }
+
                 string roomNumber;
                 cout << "Podaj numer pokoju: \n";
                 cin >> roomNumber;
@@ -780,57 +824,3 @@ int main() {
 
     return 0;
 }
-
-// // usunac
-// string checkInTime = hotel.getCheckInTime();
-//     string checkOutTime = hotel.getCheckOutTime();
-//     string from = "2025-01-02";
-//     string to = "2025-01-06";
-//     time_t startDate = convertDate(from + string(" ") + checkInTime);
-//     time_t endDate = convertDate(to + string(" ") + checkOutTime);
-
-//     auto availableRooms = hotel.getAvailableRooms(startDate, endDate, 2);
-//     cout << "dostepne: ";
-//     for (auto room : availableRooms) {
-//         cout << room->getRoomNumber() << " ";
-//     }
-//     cout << "\n";
-
-//     if (!availableRooms.empty()) {
-//         auto chosenRoom = availableRooms[0];
-//         auto reservation1 = new Reservation(&guest1, startDate, endDate, chosenRoom);
-//         guest1.addReservation(reservation1);
-//         chosenRoom->bookRoom(startDate, endDate);
-
-//         // cout << "Rezerwacja pomyślna!\n";
-//     }
-//     hotel.displayReservations();
-
-//     availableRooms = hotel.getAvailableRooms(startDate, endDate, 2);
-//     cout << "dostepne: ";
-//     for (auto room : availableRooms) {
-//         cout << room->getRoomNumber() << " ";
-//     }
-//     cout << "\n";
-
-//     if (!availableRooms.empty()) {
-//         auto chosenRoom = availableRooms[0];
-//         auto reservation2 = new Reservation(&guest1, startDate, endDate, chosenRoom);
-//         guest1.addReservation(reservation2);
-//         chosenRoom->bookRoom(startDate, endDate);
-//     }
-
-//     availableRooms = hotel.getAvailableRooms(startDate, endDate, 2);
-//     cout << "dostepne: ";
-//     for (auto room : availableRooms) {
-//         cout << room->getRoomNumber() << " ";
-//     }
-//     cout << "\n";
-//     if (!availableRooms.empty()) {
-//         auto chosenRoom = availableRooms[0];
-//         auto reservation3 = new Reservation(&guest2, startDate, endDate, chosenRoom);
-//         guest2.addReservation(reservation3);
-//         chosenRoom->bookRoom(startDate, endDate);
-//     }
-
-//     hotel.displayReservations();
