@@ -32,13 +32,25 @@ private:
     string checkOutTime;
     string password;
 
-public:
     Hotel(string n, string a, string chkInTime, string chkOutTime, string p)
-        : name(n), address(a), checkInTime(chkInTime), checkOutTime(chkOutTime),password(p) {}
+        : name(n), address(a), checkInTime(chkInTime), checkOutTime(chkOutTime), password(p) {}
+
+    static Hotel* instance;
+
+public:
+
+    Hotel(const Hotel&) = delete;
+    Hotel& operator=(const Hotel&) = delete;
+
+    static Hotel* getInstance(string n = "", string a = "", string chkInTime = "", string chkOutTime = "", string p = "") {
+        if (instance == nullptr) {
+            instance = new Hotel(n, a, chkInTime, chkOutTime, p);
+        }
+        return instance;
+    }
 
     void addGuest(Guest* guest) { guests.push_back(guest); }
     void addRoom(Room& room) { rooms.push_back(&room); }
-
 
     vector<Room*> getAvailableRooms(time_t startDate, time_t endDate, unsigned int peopleCount);
     vector<Reservation*> getAllReservations();
@@ -51,6 +63,9 @@ public:
     void displayReservations();
     void displayGuests();
 };
+
+// Inicjalizacja instancji hotelu
+Hotel* Hotel::instance = nullptr;
 
 class Room {
 private:
@@ -805,7 +820,9 @@ void manageGuestProfile(Guest* guest, Hotel* hotel) {
 
 
 int main() {
-    Hotel hotel("Słoneczny młyn", "Portowa 5", "15:00:00", "10:00:00", "admin123");
+    // Uzyskanie instancji Hotelu
+    Hotel* hotel = Hotel::getInstance("Słoneczny młyn", "Portowa 5", "15:00:00", "10:00:00", "admin123");
+
     Room room1("101", "Standard", 200, 2);
     Room room2("102", "Deluxe", 300, 3);
     Room room3("103", "Standard", 300, 4);
@@ -813,14 +830,14 @@ int main() {
     Guest guest1("Jan Kowalski", "jankowalski@gmail.com", "haslo123");
     Guest guest2("Paweł Nowak", "asd@gmail.com", "asd");
 
-    hotel.addRoom(room1);
-    hotel.addRoom(room2);
-    hotel.addRoom(room3);
-    hotel.addRoom(room4);
-    hotel.addGuest(&guest1);
-    hotel.addGuest(&guest2);
+    hotel->addRoom(room1);
+    hotel->addRoom(room2);
+    hotel->addRoom(room3);
+    hotel->addRoom(room4);
+    hotel->addGuest(&guest1);
+    hotel->addGuest(&guest2);
 
-    displayMainManu(&hotel);
+    displayMainManu(hotel);
 
     return 0;
 }
