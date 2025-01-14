@@ -32,13 +32,25 @@ private:
     string checkOutTime;
     string password;
 
-public:
     Hotel(string n, string a, string chkInTime, string chkOutTime, string p)
-        : name(n), address(a), checkInTime(chkInTime), checkOutTime(chkOutTime),password(p) {}
+        : name(n), address(a), checkInTime(chkInTime), checkOutTime(chkOutTime), password(p) {}
+
+    static Hotel* instance;
+
+public:
+
+    Hotel(const Hotel&) = delete;
+    Hotel& operator=(const Hotel&) = delete;
+
+    static Hotel* getInstance(string n = "", string a = "", string chkInTime = "", string chkOutTime = "", string p = "") {
+        if (instance == nullptr) {
+            instance = new Hotel(n, a, chkInTime, chkOutTime, p);
+        }
+        return instance;
+    }
 
     void addGuest(Guest* guest) { guests.push_back(guest); }
     void addRoom(Room& room) { rooms.push_back(&room); }
-
 
     vector<Room*> getAvailableRooms(time_t startDate, time_t endDate, unsigned int peopleCount);
     vector<Reservation*> getAllReservations();
@@ -51,6 +63,9 @@ public:
     void displayReservations();
     void displayGuests();
 };
+
+// Inicjalizacja instancji hotelu
+Hotel* Hotel::instance = nullptr;
 
 class Room {
 private:
@@ -344,7 +359,7 @@ string inputDate() {
     // sprawdzanie poprawnosci daty, ewentualna prosba o ponowne podanie
     while (true) {
         cin >> date;
-        
+
         int year, month, day;
         sscanf(date.c_str(), "%d-%d-%d", &year, &month, &day);
 
@@ -366,11 +381,23 @@ time_t convertDate(string datetime) {
     return mktime(&dt);
 }
 
+int getValidatedChoice() {
+    int choice;
+    while (!(cin >> choice)) { // Dopóki wczytanie nie powiedzie się
+        cin.clear(); // Czyść flagę błędu
+        cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Ignoruj resztę danych w buforze
+        cout << "Nieprawidłowy wybór. Wprowadź liczbę: ";
+    }
+    cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Ignoruj resztę danych w buforze
+    return choice;
+}
+
 void manageHotelProfile(Hotel* hotel);
 void manageGuestLogin(Hotel* hotel);
 void manageGuestProfile(Guest* guest, Hotel* hotel);
 
 void displayMainManu(Hotel* hotel) {
+
     int choice = 0;
 
     while (choice != 3) {
@@ -380,7 +407,7 @@ void displayMainManu(Hotel* hotel) {
         cout << "2. Profil gościa\n";
         cout << "3. Zakończ\n";
         cout << "Twój wybór: ";
-        cin >> choice;
+        choice = getValidatedChoice();
 
         switch (choice) {
             case 1:
@@ -429,7 +456,7 @@ void manageHotelProfile(Hotel* hotel) {
         cout << "4. Anuluj rezerwacje\n";
         cout << "5. Powrót do głównego menu\n";
         cout << "Twój wybór: ";
-        cin >> choice;
+        choice = getValidatedChoice();
 
         switch (choice) {
             case 1: {
@@ -498,7 +525,7 @@ void manageGuestLogin(Hotel* hotel) {
         cout << "2. Utwórz nowe konto\n";
         cout << "3. Powrót do menu\n";
         cout << "Twój wybór: ";
-        cin >> choice;
+        choice = getValidatedChoice();
 
         switch (choice) {
             case 1: {
@@ -582,7 +609,7 @@ void manageGuestProfile(Guest* guest, Hotel* hotel) {
         cout << "5. Zmień dane\n";
         cout << "6. Powrót do głównego menu\n";
         cout << "Twój wybór: ";
-        cin >> choice;
+        choice = getValidatedChoice();
 
         switch (choice) {
             // dokonanie rezerwacji
@@ -711,7 +738,7 @@ void manageGuestProfile(Guest* guest, Hotel* hotel) {
                 cout << "2. Platnosc gotowka\n";
                 cout << "3. Powrot\n";
                 cout << "Twój wybór: ";
-                cin >> choice2;
+                choice2 = getValidatedChoice();
 
                 switch (choice2) {
                     case 1: {
@@ -750,7 +777,7 @@ void manageGuestProfile(Guest* guest, Hotel* hotel) {
                     cout << "4. Zmień hasło\n";
                     cout << "5. Powrót\n";
                     cout << "Twój wybór: ";
-                    cin >> choice2;
+                    choice2 = getValidatedChoice();
 
                     switch (choice2) {
                         case 1: {
@@ -799,13 +826,21 @@ void manageGuestProfile(Guest* guest, Hotel* hotel) {
                 }
                 break;
             }
+            case 6: {
+                cout << "Powrót do głównego menu\n";
+                break;
+            }
+            default:
+                cout << "Nieprawidłowy wybór. Spróbuj ponownie.\n";
         }
     }
 }
 
 
 int main() {
-    Hotel hotel("Słoneczny młyn", "Portowa 5", "15:00:00", "10:00:00", "admin123");
+    // Uzyskanie instancji Hotelu
+    Hotel* hotel = Hotel::getInstance("Słoneczny młyn", "Portowa 5", "15:00:00", "10:00:00", "admin123");
+
     Room room1("101", "Standard", 200, 2);
     Room room2("102", "Deluxe", 300, 3);
     Room room3("103", "Standard", 300, 4);
@@ -813,14 +848,14 @@ int main() {
     Guest guest1("Jan Kowalski", "jankowalski@gmail.com", "haslo123");
     Guest guest2("Paweł Nowak", "asd@gmail.com", "asd");
 
-    hotel.addRoom(room1);
-    hotel.addRoom(room2);
-    hotel.addRoom(room3);
-    hotel.addRoom(room4);
-    hotel.addGuest(&guest1);
-    hotel.addGuest(&guest2);
+    hotel->addRoom(room1);
+    hotel->addRoom(room2);
+    hotel->addRoom(room3);
+    hotel->addRoom(room4);
+    hotel->addGuest(&guest1);
+    hotel->addGuest(&guest2);
 
-    displayMainManu(&hotel);
+    displayMainManu(hotel);
 
     return 0;
 }
